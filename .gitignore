@@ -1,3 +1,7 @@
+# ignore original sample code
+LinkerLoaderTech/*
+LinkerLoaderTech.zip
+
 # Prerequisites
 *.d
 
