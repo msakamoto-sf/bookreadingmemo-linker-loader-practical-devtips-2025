@@ -2,6 +2,9 @@
 LinkerLoaderTech/*
 LinkerLoaderTech.zip
 
+# ignore sample binary files
+hello
+
 # Prerequisites
 *.d
 
