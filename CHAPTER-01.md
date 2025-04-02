@@ -2,19 +2,8 @@
 
 ### リスト 1.1 hello.c
 
-hello.c:
-
-```
-#include <stdio.h>
-#include <stdlib.h>
-
-int main() {
-    printf("Hello, World\n");
-    exit(0);
-}
-```
-
-変更点: 書籍のままだと `exit()` 呼び出しで `warning: implicit declaration of function exit` が発生し、stdlib.h を使ってね、と案内されたのでそちらの include を追加している。
+- [hello.c](CHAPTER-01/hello.c)
+- 変更点: 書籍のままだと `exit()` 呼び出しで `warning: implicit declaration of function exit` が発生し、stdlib.h を使ってね、と案内されたのでそちらの include を追加している。
 
 ### リスト 1.2 リンクまでの流れ
 
@@ -299,4 +288,465 @@ Version References:
 
 プログラムヘッダの数が書籍より多いが、表示内容は大きく変わっていないと思われる。
 
+### リスト 1.10, 1.11 さまざまな変数の定義
+
+- [values_sub.c](CHAPTER-01/values_sub.c)
+- [values.c](CHAPTER-01/values.c)
+
+コンパイルと実行:
+
+```
+$ gcc -c values_sub.c
+$ gcc -c values.c
+$ gcc -o values values.o values_sub.o
+
+$ ./values
+   c = a
+  i0 = 0,   i1 = 0,   i2 = 1
+ ci0 = 0,  ci1 = 0,  ci2 = 1
+  p1 = sample0,  str = sample1
+  &c = 0x00404018
+ &i0 = 0x00404040,  &i1 = 0x00404044,  &i2 = 0x0040401c
+&ci0 = 0x0040210c, &ci1 = 0x00402110, &ci2 = 0x00402114
+ &p1 = 0x00404028, &str = 0x00404030
+```
+
+### リスト 1.12 nm values_sub.o の結果
+
+対応するCソースのコメントつき:
+
+```
+$ nm values_sub.o
+0000000000000000 D c     // char c = 'a';
+0000000000000000 R ci0   // const int ci0;
+0000000000000004 R ci1   // const int ci1 = 0;
+0000000000000008 R ci2   // const int ci2 = 1;
+0000000000000000 T func  // int func() { ... }
+0000000000000000 B i0    // int i0;
+0000000000000004 B i1    // int i1 = 0;
+0000000000000004 D i2    // int i2 = 1;
+0000000000000008 B p0    // char * p0;
+0000000000000010 D p1    // char * p1 = "sample0";
+0000000000000010 b si0   // static int si0;
+0000000000000014 b si1   // static int si1 = 0;
+0000000000000008 d si2   // static int si2 = 1;
+0000000000000018 D str   // char str[] = "sample1";
+```
+
+シンボルのタイプ(`nm(1)` より抜粋):
+
+- B/b : 未初期化またはゼロ初期化されたBSS領域 (大文字がglobal, 小文字がlocal)
+- D/d : 初期化済みのデータ領域 (大文字がglobal, 小文字がlocal)
+- R/r : 読み込み専用領域 (大文字がglobal, 小文字がlocal)
+- T/t : text(code)領域 (= 実行コード)
+- U : このELFファイル内では未定義のシンボル
+
+→ `values_sub.o` のシンボルタイプについて、 `values_sub.c` の変数定義と一致していることを確認できた。
+
+参考: `nm values.o` の結果
+
+```
+$ nm values.o
+                 U c
+                 U ci0
+                 U ci1
+                 U ci2
+                 U exit
+                 U i0
+                 U i1
+                 U i2
+0000000000000000 T main
+                 U p1
+                 U printf
+                 U str
+```
+
+### リスト 1.13 nm values の結果
+
+```
+$ nm values
+(...)
+0000000000401050 T _start
+0000000000404018 D c
+000000000040210c R ci0
+0000000000402110 R ci1
+0000000000402114 R ci2
+0000000000404038 b completed.0
+0000000000404010 W data_start
+0000000000401090 t deregister_tm_clones
+                 U exit@GLIBC_2.2.5
+0000000000401130 t frame_dummy
+000000000040122c T func
+0000000000404040 B i0
+0000000000404044 B i1
+000000000040401c D i2
+0000000000401136 T main
+0000000000404048 B p0
+0000000000404028 D p1
+                 U printf@GLIBC_2.2.5
+00000000004010c0 t register_tm_clones
+0000000000404050 b si0
+0000000000404054 b si1
+0000000000404020 d si2
+0000000000404030 D str
+```
+
+### リスト 1.16 strip values の実行結果
+
+```
+$ ls -l values
+-rwxr-xr-x. 1 ec2-user ec2-user 25616 Apr  2 15:42 values*
+
+$ file values
+values: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, \
+interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=f691308c805e0c81fd3ba87831d73b47f6222dba, \
+for GNU/Linux 3.2.0, not stripped
+
+$ strip values
+
+$ ls -l values
+-rwxr-xr-x. 1 ec2-user ec2-user 14696 Apr  2 15:56 values*
+
+$ file values
+values: ELF 64-bit LSB executable, x86-64, version 1 (SYSV), dynamically linked, \
+interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=f691308c805e0c81fd3ba87831d73b47f6222dba, \
+for GNU/Linux 3.2.0, stripped
+
+$ nm values
+nm: values: no symbols
+```
+
+- strip 後はファイルサイズが小さくなったのを確認できた。
+- `file` コマンドからも、strip前は "not stripped" だったが strip後は "stripped" という表記に変わっている。
+- `nm` コマンドでも strip 後は "no symbols" と表示され、シンボル情報（テーブル）が消えていることを確認できた。
+
+### リスト 1.17 アプリケーション用のリンカ・スクリプト
+
+書籍では `/usr/libdata/ldscripts/` 以下にある `elf_i386.x` の内容を元に解説している。
+今回は Amazon Linux 2023 の binutils を使う。
+
+試しに、gccコンパイル時に `-Wl,` で渡せるリンカ向けオプションとして以下のように `--verbose` をつけてみて、リンカの詳細出力を出してみたところ、どうも内部的に組み込まれた linker script を使うようになっているらしい。
+
+(全部コピペしてみたが大分長い)
+
+```
+$ gcc -Wl,--verbose -o values values.o values_sub.o
+GNU ld version 2.39-6.amzn2023.0.11
+  Supported emulations:
+   elf_x86_64
+   elf32_x86_64
+   elf_i386
+   elf_iamcu
+   i386pep
+   i386pe
+   elf64bpf
+using internal linker script:
+==================================================
+/* Script for -z combreloc -z separate-code */
+/* Copyright (C) 2014-2022 Free Software Foundation, Inc.
+   Copying and distribution of this script, with or without modification,
+   are permitted in any medium without royalty provided the copyright
+   notice and this notice are preserved.  */
+OUTPUT_FORMAT("elf64-x86-64", "elf64-x86-64",
+              "elf64-x86-64")
+OUTPUT_ARCH(i386:x86-64)
+ENTRY(_start)
+SEARCH_DIR("=/usr/x86_64-amazon-linux/lib64"); SEARCH_DIR("=/usr/lib64"); SEARCH_DIR("=/usr/local/lib64"); SEARCH_DIR("=/lib64"); SEARCH_DIR("=/usr/x86_64-amazon-linux/lib"); SEARCH_DIR("=/usr/local/lib"); SEARCH_DIR("=/lib"); SEARCH_DIR("=/usr/lib");
+SECTIONS
+{
+  PROVIDE (__executable_start = SEGMENT_START("text-segment", 0x400000)); . = SEGMENT_START("text-segment", 0x400000) + SIZEOF_HEADERS;
+  .interp         : { *(.interp) }
+  .note.gnu.build-id  : { *(.note.gnu.build-id) }
+  .hash           : { *(.hash) }
+  .gnu.hash       : { *(.gnu.hash) }
+  .dynsym         : { *(.dynsym) }
+  .dynstr         : { *(.dynstr) }
+  .gnu.version    : { *(.gnu.version) }
+  .gnu.version_d  : { *(.gnu.version_d) }
+  .gnu.version_r  : { *(.gnu.version_r) }
+  .rela.dyn       :
+    {
+      *(.rela.init)
+      *(.rela.text .rela.text.* .rela.gnu.linkonce.t.*)
+      *(.rela.fini)
+      *(.rela.rodata .rela.rodata.* .rela.gnu.linkonce.r.*)
+      *(.rela.data .rela.data.* .rela.gnu.linkonce.d.*)
+      *(.rela.tdata .rela.tdata.* .rela.gnu.linkonce.td.*)
+      *(.rela.tbss .rela.tbss.* .rela.gnu.linkonce.tb.*)
+      *(.rela.ctors)
+      *(.rela.dtors)
+      *(.rela.got)
+      *(.rela.bss .rela.bss.* .rela.gnu.linkonce.b.*)
+      *(.rela.ldata .rela.ldata.* .rela.gnu.linkonce.l.*)
+      *(.rela.lbss .rela.lbss.* .rela.gnu.linkonce.lb.*)
+      *(.rela.lrodata .rela.lrodata.* .rela.gnu.linkonce.lr.*)
+      *(.rela.ifunc)
+    }
+  .rela.plt       :
+    {
+      *(.rela.plt)
+      PROVIDE_HIDDEN (__rela_iplt_start = .);
+      *(.rela.iplt)
+      PROVIDE_HIDDEN (__rela_iplt_end = .);
+    }
+  .relr.dyn : { *(.relr.dyn) }
+  . = ALIGN(CONSTANT (MAXPAGESIZE));
+  .init           :
+  {
+    KEEP (*(SORT_NONE(.init)))
+  }
+  .plt            : { *(.plt) *(.iplt) }
+.plt.got        : { *(.plt.got) }
+.plt.sec        : { *(.plt.sec) }
+  .text           :
+  {
+    *(.text.unlikely .text.*_unlikely .text.unlikely.*)
+    *(.text.exit .text.exit.*)
+    *(.text.startup .text.startup.*)
+    *(.text.hot .text.hot.*)
+    *(SORT(.text.sorted.*))
+    *(.text .stub .text.* .gnu.linkonce.t.*)
+    /* .gnu.warning sections are handled specially by elf.em.  */
+    *(.gnu.warning)
+  }
+  .fini           :
+  {
+    KEEP (*(SORT_NONE(.fini)))
+  }
+  PROVIDE (__etext = .);
+  PROVIDE (_etext = .);
+  PROVIDE (etext = .);
+  . = ALIGN(CONSTANT (MAXPAGESIZE));
+  /* Adjust the address for the rodata segment.  We want to adjust up to
+     the same address within the page on the next page up.  */
+  . = SEGMENT_START("rodata-segment", ALIGN(CONSTANT (MAXPAGESIZE)) + (. & (CONSTANT (MAXPAGESIZE) - 1)));
+  .rodata         : { *(.rodata .rodata.* .gnu.linkonce.r.*) }
+  .rodata1        : { *(.rodata1) }
+  .eh_frame_hdr   : { *(.eh_frame_hdr) *(.eh_frame_entry .eh_frame_entry.*) }
+  .eh_frame       : ONLY_IF_RO { KEEP (*(.eh_frame)) *(.eh_frame.*) }
+  .gcc_except_table   : ONLY_IF_RO { *(.gcc_except_table .gcc_except_table.*) }
+  .gnu_extab   : ONLY_IF_RO { *(.gnu_extab*) }
+  /* These sections are generated by the Sun/Oracle C++ compiler.  */
+  .exception_ranges   : ONLY_IF_RO { *(.exception_ranges*) }
+  /* Adjust the address for the data segment.  We want to adjust up to
+     the same address within the page on the next page up.  */
+  . = DATA_SEGMENT_ALIGN (CONSTANT (MAXPAGESIZE), CONSTANT (COMMONPAGESIZE));
+  /* Exception handling  */
+  .eh_frame       : ONLY_IF_RW { KEEP (*(.eh_frame)) *(.eh_frame.*) }
+  .gnu_extab      : ONLY_IF_RW { *(.gnu_extab) }
+  .gcc_except_table   : ONLY_IF_RW { *(.gcc_except_table .gcc_except_table.*) }
+  .exception_ranges   : ONLY_IF_RW { *(.exception_ranges*) }
+  /* Thread Local Storage sections  */
+  .tdata          :
+   {
+     PROVIDE_HIDDEN (__tdata_start = .);
+     *(.tdata .tdata.* .gnu.linkonce.td.*)
+   }
+  .tbss           : { *(.tbss .tbss.* .gnu.linkonce.tb.*) *(.tcommon) }
+  .preinit_array    :
+  {
+    PROVIDE_HIDDEN (__preinit_array_start = .);
+    KEEP (*(.preinit_array))
+    PROVIDE_HIDDEN (__preinit_array_end = .);
+  }
+  .init_array    :
+  {
+    PROVIDE_HIDDEN (__init_array_start = .);
+    KEEP (*(SORT_BY_INIT_PRIORITY(.init_array.*) SORT_BY_INIT_PRIORITY(.ctors.*)))
+    KEEP (*(.init_array EXCLUDE_FILE (*crtbegin.o *crtbegin?.o *crtend.o *crtend?.o ) .ctors))
+    PROVIDE_HIDDEN (__init_array_end = .);
+  }
+  .fini_array    :
+  {
+    PROVIDE_HIDDEN (__fini_array_start = .);
+    KEEP (*(SORT_BY_INIT_PRIORITY(.fini_array.*) SORT_BY_INIT_PRIORITY(.dtors.*)))
+    KEEP (*(.fini_array EXCLUDE_FILE (*crtbegin.o *crtbegin?.o *crtend.o *crtend?.o ) .dtors))
+    PROVIDE_HIDDEN (__fini_array_end = .);
+  }
+  .ctors          :
+  {
+    /* gcc uses crtbegin.o to find the start of
+       the constructors, so we make sure it is
+       first.  Because this is a wildcard, it
+       doesn't matter if the user does not
+       actually link against crtbegin.o; the
+       linker won't look for a file to match a
+       wildcard.  The wildcard also means that it
+       doesn't matter which directory crtbegin.o
+       is in.  */
+    KEEP (*crtbegin.o(.ctors))
+    KEEP (*crtbegin?.o(.ctors))
+    /* We don't want to include the .ctor section from
+       the crtend.o file until after the sorted ctors.
+       The .ctor section from the crtend file contains the
+       end of ctors marker and it must be last */
+    KEEP (*(EXCLUDE_FILE (*crtend.o *crtend?.o ) .ctors))
+    KEEP (*(SORT(.ctors.*)))
+    KEEP (*(.ctors))
+  }
+  .dtors          :
+  {
+    KEEP (*crtbegin.o(.dtors))
+    KEEP (*crtbegin?.o(.dtors))
+    KEEP (*(EXCLUDE_FILE (*crtend.o *crtend?.o ) .dtors))
+    KEEP (*(SORT(.dtors.*)))
+    KEEP (*(.dtors))
+  }
+  .jcr            : { KEEP (*(.jcr)) }
+  .data.rel.ro : { *(.data.rel.ro.local* .gnu.linkonce.d.rel.ro.local.*) *(.data.rel.ro .data.rel.ro.* .gnu.linkonce.d.rel.ro.*) }
+  .dynamic        : { *(.dynamic) }
+  .got            : { *(.got) *(.igot) }
+  . = DATA_SEGMENT_RELRO_END (SIZEOF (.got.plt) >= 24 ? 24 : 0, .);
+  .got.plt        : { *(.got.plt) *(.igot.plt) }
+  .data           :
+  {
+    *(.data .data.* .gnu.linkonce.d.*)
+    SORT(CONSTRUCTORS)
+  }
+  .data1          : { *(.data1) }
+  _edata = .; PROVIDE (edata = .);
+  . = .;
+  __bss_start = .;
+  .bss            :
+  {
+   *(.dynbss)
+   *(.bss .bss.* .gnu.linkonce.b.*)
+   *(COMMON)
+   /* Align here to ensure that the .bss section occupies space up to
+      _end.  Align after .bss to ensure correct alignment even if the
+      .bss section disappears because there are no input sections.
+      FIXME: Why do we need it? When there is no .bss section, we do not
+      pad the .data section.  */
+   . = ALIGN(. != 0 ? 64 / 8 : 1);
+  }
+  .lbss   :
+  {
+    *(.dynlbss)
+    *(.lbss .lbss.* .gnu.linkonce.lb.*)
+    *(LARGE_COMMON)
+  }
+  . = ALIGN(64 / 8);
+  . = SEGMENT_START("ldata-segment", .);
+  .lrodata   ALIGN(CONSTANT (MAXPAGESIZE)) + (. & (CONSTANT (MAXPAGESIZE) - 1)) :
+  {
+    *(.lrodata .lrodata.* .gnu.linkonce.lr.*)
+  }
+  .ldata   ALIGN(CONSTANT (MAXPAGESIZE)) + (. & (CONSTANT (MAXPAGESIZE) - 1)) :
+  {
+    *(.ldata .ldata.* .gnu.linkonce.l.*)
+    . = ALIGN(. != 0 ? 64 / 8 : 1);
+  }
+  . = ALIGN(64 / 8);
+  _end = .; PROVIDE (end = .);
+  . = DATA_SEGMENT_END (.);
+  /* Stabs debugging sections.  */
+  .stab          0 : { *(.stab) }
+  .stabstr       0 : { *(.stabstr) }
+  .stab.excl     0 : { *(.stab.excl) }
+  .stab.exclstr  0 : { *(.stab.exclstr) }
+  .stab.index    0 : { *(.stab.index) }
+  .stab.indexstr 0 : { *(.stab.indexstr) }
+  .comment       0 : { *(.comment) }
+  .gnu.build.attributes : { *(.gnu.build.attributes .gnu.build.attributes.*) }
+  /* DWARF debug sections.
+     Symbols in the DWARF debugging sections are relative to the beginning
+     of the section so we begin them at 0.  */
+  /* DWARF 1.  */
+  .debug          0 : { *(.debug) }
+  .line           0 : { *(.line) }
+  /* GNU DWARF 1 extensions.  */
+  .debug_srcinfo  0 : { *(.debug_srcinfo) }
+  .debug_sfnames  0 : { *(.debug_sfnames) }
+  /* DWARF 1.1 and DWARF 2.  */
+  .debug_aranges  0 : { *(.debug_aranges) }
+  .debug_pubnames 0 : { *(.debug_pubnames) }
+  /* DWARF 2.  */
+  .debug_info     0 : { *(.debug_info .gnu.linkonce.wi.*) }
+  .debug_abbrev   0 : { *(.debug_abbrev) }
+  .debug_line     0 : { *(.debug_line .debug_line.* .debug_line_end) }
+  .debug_frame    0 : { *(.debug_frame) }
+  .debug_str      0 : { *(.debug_str) }
+  .debug_loc      0 : { *(.debug_loc) }
+  .debug_macinfo  0 : { *(.debug_macinfo) }
+  /* SGI/MIPS DWARF 2 extensions.  */
+  .debug_weaknames 0 : { *(.debug_weaknames) }
+  .debug_funcnames 0 : { *(.debug_funcnames) }
+  .debug_typenames 0 : { *(.debug_typenames) }
+  .debug_varnames  0 : { *(.debug_varnames) }
+  /* DWARF 3.  */
+  .debug_pubtypes 0 : { *(.debug_pubtypes) }
+  .debug_ranges   0 : { *(.debug_ranges) }
+  /* DWARF 5.  */
+  .debug_addr     0 : { *(.debug_addr) }
+  .debug_line_str 0 : { *(.debug_line_str) }
+  .debug_loclists 0 : { *(.debug_loclists) }
+  .debug_macro    0 : { *(.debug_macro) }
+  .debug_names    0 : { *(.debug_names) }
+  .debug_rnglists 0 : { *(.debug_rnglists) }
+  .debug_str_offsets 0 : { *(.debug_str_offsets) }
+  .debug_sup      0 : { *(.debug_sup) }
+  .gnu.attributes 0 : { KEEP (*(.gnu.attributes)) }
+  /DISCARD/ : { *(.note.GNU-stack) *(.gnu_debuglink) *(.gnu.lto_*) }
+}
+
+
+==================================================
+/usr/bin/ld: mode elf_x86_64
+attempt to open /usr/lib/gcc/x86_64-amazon-linux/11/../../../../lib64/crt1.o succeeded
+/usr/lib/gcc/x86_64-amazon-linux/11/../../../../lib64/crt1.o
+attempt to open /usr/lib/gcc/x86_64-amazon-linux/11/../../../../lib64/crti.o succeeded
+/usr/lib/gcc/x86_64-amazon-linux/11/../../../../lib64/crti.o
+attempt to open /usr/lib/gcc/x86_64-amazon-linux/11/crtbegin.o succeeded
+/usr/lib/gcc/x86_64-amazon-linux/11/crtbegin.o
+attempt to open values.o succeeded
+values.o
+attempt to open values_sub.o succeeded
+values_sub.o
+attempt to open /usr/lib/gcc/x86_64-amazon-linux/11/libgcc.so failed
+attempt to open /usr/lib/gcc/x86_64-amazon-linux/11/libgcc.a succeeded
+/usr/lib/gcc/x86_64-amazon-linux/11/libgcc.a
+attempt to open /usr/lib/gcc/x86_64-amazon-linux/11/libgcc_s.so succeeded
+opened script file /usr/lib/gcc/x86_64-amazon-linux/11/libgcc_s.so
+/usr/lib/gcc/x86_64-amazon-linux/11/libgcc_s.so
+opened script file /usr/lib/gcc/x86_64-amazon-linux/11/libgcc_s.so
+attempt to open /lib64/libgcc_s.so.1 succeeded
+/lib64/libgcc_s.so.1
+attempt to open /usr/lib/gcc/x86_64-amazon-linux/11/libgcc.a succeeded
+/usr/lib/gcc/x86_64-amazon-linux/11/libgcc.a
+attempt to open /usr/lib/gcc/x86_64-amazon-linux/11/libc.so failed
+attempt to open /usr/lib/gcc/x86_64-amazon-linux/11/libc.a failed
+attempt to open /usr/lib/gcc/x86_64-amazon-linux/11/../../../../lib64/libc.so succeeded
+opened script file /usr/lib/gcc/x86_64-amazon-linux/11/../../../../lib64/libc.so
+/usr/lib/gcc/x86_64-amazon-linux/11/../../../../lib64/libc.so
+opened script file /usr/lib/gcc/x86_64-amazon-linux/11/../../../../lib64/libc.so
+attempt to open /lib64/libc.so.6 succeeded
+/lib64/libc.so.6
+attempt to open /usr/lib64/libc_nonshared.a succeeded
+/usr/lib64/libc_nonshared.a
+attempt to open /lib64/ld-linux-x86-64.so.2 succeeded
+/lib64/ld-linux-x86-64.so.2
+/usr/lib64/libc_nonshared.a
+/lib64/ld-linux-x86-64.so.2
+attempt to open /usr/lib/gcc/x86_64-amazon-linux/11/libgcc.so failed
+attempt to open /usr/lib/gcc/x86_64-amazon-linux/11/libgcc.a succeeded
+/usr/lib/gcc/x86_64-amazon-linux/11/libgcc.a
+attempt to open /usr/lib/gcc/x86_64-amazon-linux/11/libgcc_s.so succeeded
+opened script file /usr/lib/gcc/x86_64-amazon-linux/11/libgcc_s.so
+/usr/lib/gcc/x86_64-amazon-linux/11/libgcc_s.so
+opened script file /usr/lib/gcc/x86_64-amazon-linux/11/libgcc_s.so
+attempt to open /lib64/libgcc_s.so.1 succeeded
+/lib64/libgcc_s.so.1
+attempt to open /usr/lib/gcc/x86_64-amazon-linux/11/libgcc.a succeeded
+/usr/lib/gcc/x86_64-amazon-linux/11/libgcc.a
+attempt to open /usr/lib/gcc/x86_64-amazon-linux/11/crtend.o succeeded
+/usr/lib/gcc/x86_64-amazon-linux/11/crtend.o
+attempt to open /usr/lib/gcc/x86_64-amazon-linux/11/../../../../lib64/crtn.o succeeded
+/usr/lib/gcc/x86_64-amazon-linux/11/../../../../lib64/crtn.o
+ld-linux-x86-64.so.2 needed by /lib64/libc.so.6
+found ld-linux-x86-64.so.2 at /lib64/ld-linux-x86-64.so.2
+```
+
+- リスト 1.19 で紹介されている ENTRY の指定をこちらでも確認できた。
+  - `ENTRY(_start)`
+- `crt1.o, crti.o, crtbegin.o, crtn.o, crtend.o` などのスタートアップ・ルーチンをリンクしている様子をこちらでも確認できた。
 
