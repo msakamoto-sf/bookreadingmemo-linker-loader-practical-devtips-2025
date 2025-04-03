@@ -384,4 +384,65 @@ Relocation section '.rela.eh_frame' at offset 0x4e8 contains 2 entries:
 
 表示される具体的な値は書籍と異なっているが、その意味については書籍と同じと思われる。
 
+### リスト 2.17 ELF形式のダンプ・プログラム
+
+- [elfdump.c](CHAPTER-02/elfdump.c)
+- 書籍からの変更点
+  - `IS_ELF` マクロによるチェック処理をコメントアウト
+  - 定義値を全体的に64bitのものに変更
+  - 日本語コメントがEUC-JPで入っていたので UTF-8 に文字コード変更
+
+コンパイル & 実行:
+
+```
+$ gcc -c elfdump.c -Wall
+$ gcc elfdump.o -Wall -o elfdump
+
+$ ./elfdump elfsamp.o
+Sections:
+        [0]
+        [1]     .text
+        [2]     .rela.text
+        [3]     .data
+        [4]     .bss
+        [5]     .rodata
+        [6]     .comment
+        [7]     .note.GNU-stack
+        [8]     .note.gnu.property
+        [9]     .eh_frame
+        [10]    .rela.eh_frame
+        [11]    .symtab
+        [12]    .strtab
+        [13]    .shstrtab
+Segments:
+Symbols:
+        [1]     4       0       elfsamp.c
+        [5]     1       4       s1
+        [6]     1       4       s2
+        [8]     2       71      sfunc
+        [9]     1       4       g1
+        [10]    1       4       g2
+        [11]    1       4       g3
+        [12]    0       0       efunc
+        [13]    0       0       e3
+        [14]    2       79      gfunc
+        [15]    0       0       stdout
+        [16]    0       0       fwrite
+Relocations:
+        [0]     12      efunc
+        [4]     10      g2
+        [5]     10      g2
+        [6]     9       g1
+        [7]     13      e3
+        [8]     12      efunc
+        [9]     13      e3
+        [10]    13      e3
+        [11]    9       g1
+        [12]    15      stdout
+        [14]    16      fwrite
+```
+
+書籍と同様の内容となることを確認した。
+
+リスト 2.19 については省略。
 
