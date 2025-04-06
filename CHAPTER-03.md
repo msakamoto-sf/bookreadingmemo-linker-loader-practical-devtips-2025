@@ -129,3 +129,233 @@ f12345678901234567.txt  8
 
 書籍と同様にアーカイブファイル内のファイル名とサイズを表示することができた。
 
+### リスト 3.5 アーカイブ・ファイルの解析
+
+- [ardump.c](CHAPTER-03/ardump.c)
+- 書籍からの変更点
+  - 日本語コメントの文字コードをEUC-JPからUTF-8に変更
+  - `IS_ELF` マクロの処理をコメントアウト
+  - ELF定義を64bit用に変更
+
+コンパイルと実行:
+
+```
+$ gcc -c ardump.c -Wall
+( printf() で warning が表示されるがスルー )
+
+$ gcc ardump.o -Wall -o ardump
+```
+
+### リスト 3.6 オブジェクト・ファイルの解析例
+
+ardump.o の解析:
+
+```
+$ ./ardump ardump.o
+Sections:
+        [0]
+        [1]     .text
+        [2]     .rela.text
+        [3]     .data
+        [4]     .bss
+        [5]     .rodata
+        [6]     .comment
+        [7]     .note.GNU-stack
+        [8]     .note.gnu.property
+        [9]     .eh_frame
+        [10]    .rela.eh_frame
+        [11]    .symtab
+        [12]    .strtab
+        [13]    .shstrtab
+Segments:
+Symbols:
+        [1]     4       0       ardump.c
+        [4]     2       1337    elfdump
+        [5]     0       0       stderr
+        [6]     0       0       fprintf
+        [7]     0       0       puts
+        [8]     0       0       printf
+        [9]     0       0       strcmp
+        [10]    0       0       putchar
+        [11]    2       658     main
+        [12]    0       0       open
+        [13]    0       0       exit
+        [14]    0       0       fstat
+        [15]    0       0       mmap
+        [16]    0       0       memcmp
+        [17]    0       0       fwrite
+        [18]    0       0       atoi
+        [19]    0       0       strchr
+        [20]    0       0       munmap
+        [21]    0       0       close
+Relocations:
+        [0]     5       stderr
+        [2]     6       fprintf
+        [3]     5       stderr
+        [5]     6       fprintf
+        [7]     7       puts
+        [9]     8       printf
+        [11]    9       strcmp
+        [13]    7       puts
+        [15]    8       printf
+        [17]    8       printf
+        [18]    10      putchar
+        [20]    7       puts
+        [22]    8       printf
+        [24]    7       puts
+        [26]    8       printf
+        [27]    12      open
+        [28]    13      exit
+        [29]    14      fstat
+        [30]    15      mmap
+        [32]    16      memcmp
+        [33]    5       stderr
+        [35]    17      fwrite
+        [36]    18      atoi
+        [38]    16      memcmp
+        [39]    5       stderr
+        [41]    17      fwrite
+        [43]    16      memcmp
+        [44]    5       stderr
+        [46]    17      fwrite
+        [47]    5       stderr
+        [49]    17      fwrite
+        [50]    13      exit
+        [51]    18      atoi
+        [52]    19      strchr
+        [53]    5       stderr
+        [55]    6       fprintf
+        [56]    20      munmap
+        [57]    21      close
+        [58]    13      exit
+```
+
+書籍と同様、ELFファイルの内容を正常に表示できている。
+
+### リスト 3.7 ライブラリ・ファイルの解析例
+
+`binutils-devel` パッケージの提供する `/usr/lib64/libbfd.a` ファイルを解析してみる：
+
+```
+$ ./ardump /usr/lib64/libbfd.a
+```
+
+結果は省略するが、書籍と同様、ライブラリファイルの中のオブジェクトファイルごとにELFの内容を表示できた。
+
+### リスト 3.8 - 3.12 サンプルファイル
+
+- [main.c](CHAPTER-03/main.c)
+- [samp1.c](CHAPTER-03/samp1.c)
+- [samp2.c](CHAPTER-03/samp2.c)
+- [samp3.c](CHAPTER-03/samp3.c)
+- [samp4.c](CHAPTER-03/samp4.c)
+
+コンパイル:
+
+```
+$ gcc -c samp1.c -Wall
+$ gcc -c samp2.c -Wall
+$ gcc -c samp3.c -Wall
+$ gcc -c samp4.c -Wall
+$ ar ruc libsamp.a samp?.o
+$ gcc main.c samp?.o -Wall -o samp_obj
+```
+
+オブジェクトファイルを直接合体させた `samp_obj` の解析結果:
+
+```
+$ ./ardump samp_obj | grep samp
+        [44]    4       0       samp1.c
+        [45]    4       0       samp2.c
+        [46]    4       0       samp3.c
+        [47]    4       0       samp4.c
+        [57]    2       17      samp31
+        [59]    2       7       samp41
+        [61]    2       17      samp11
+        [63]    2       7       samp21
+        [67]    2       7       samp32
+        [73]    2       7       samp42
+        [76]    2       7       samp12
+        [78]    2       7       samp22
+```
+
+samp1.o - samp4.o まですべて合体していることを確認できた。
+
+アーカイブファイルを合体させた `samp_ar` の作成と解析結果:
+
+```
+$ gcc main.c -Wall -L. -lsamp -o samp_ar
+
+$ ./ardump samp_ar | grep samp
+        [44]    4       0       samp1.c
+        [45]    4       0       samp2.c
+        [57]    2       17      samp11
+        [59]    2       7       samp21
+        [70]    2       7       samp12
+        [72]    2       7       samp22
+```
+
+書籍と同様、参照されていない samp3.o, samp4.o が含まれていないことを確認できた。
+
+### リスト 3.13 サンプル・ファイル2の修正
+
+samp2.c の `samp22()` を以下のように修正し、samp3.c 中の `samp31()` を呼び出すようにする。
+
+```
+void samp22()
+{
+    samp31();
+}
+```
+
+コンパイルとアーカイブファイルの更新:
+
+```
+$ gcc -c samp2.c -Wall
+$ ar ruc libsamp.a samp2.o
+```
+
+オブジェクトファイルを直接合体させた `samp_obj` の作成と解析結果:
+
+```
+$ gcc main.c samp?.o -Wall -o samp_obj
+
+$ ./ardump samp_obj | grep samp
+        [44]    4       0       samp1.c
+        [45]    4       0       samp2.c
+        [46]    4       0       samp3.c
+        [47]    4       0       samp4.c
+        [57]    2       17      samp31
+        [59]    2       7       samp41
+        [61]    2       17      samp11
+        [63]    2       7       samp21
+        [67]    2       7       samp32
+        [73]    2       7       samp42
+        [76]    2       7       samp12
+        [78]    2       17      samp22
+```
+
+修正前と同様、samp1.o - samp4.o まですべて合体していることを確認できた。
+
+アーカイブファイルを合体させた `samp_ar` の作成と解析結果:
+
+```
+$ gcc main.c -Wall -L. -lsamp -o samp_ar
+
+$ ./ardump samp_ar | grep samp
+        [44]    4       0       samp1.c
+        [45]    4       0       samp2.c
+        [46]    4       0       samp3.c
+        [47]    4       0       samp4.c
+        [57]    2       17      samp31
+        [59]    2       7       samp41
+        [61]    2       17      samp11
+        [63]    2       7       samp21
+        [67]    2       7       samp32
+        [73]    2       7       samp42
+        [76]    2       7       samp12
+        [78]    2       17      samp22
+```
+
+書籍と同様、samp3.o, samp4.o も含まれていることを確認できた。
+
