@@ -48,3 +48,49 @@ Idx Name          Size      VMA               LMA               File off  Algn
 
 書籍と同様、s1, s2 は `.data` セクションに配置されており、s2 が指すアドレスは `.rodata` セクション内にあることを確認できた。
 
+### リスト 4.2, 4.3 変数に値を代入する, const定義した変数に値を代入する
+
+- [const_sub.c](CHAPTER-04/const_sub.c)
+- [const.c](CHAPTER-04/const.c)
+- 書籍からの変更点は無し。
+
+`const_sub.c` のコンパイルとnmコマンド実行結果:
+
+```
+$ gcc -c const_sub.c -Wall
+$ nm const_sub.o
+0000000000000000 R a
+```
+
+書籍と同様 `a` が read-only 領域に配置されたことを確認できた。
+
+`const.c` のコンパイルとリンク、nmコマンド実行結果:
+
+```
+$ gcc -c const.c -Wall
+$ gcc const.o const_sub.o -Wall -o const
+$ nm const
+(...)
+0000000000402014 R a
+(...)
+```
+
+書籍と同様、実行ファイルにおいても `a` が read-only 領域に配置されたことを確認できた。
+
+`objdump -h const` の結果と、`const` の実行結果:
+
+```
+$ objdump -h const
+(...)
+ 15 .rodata       00000018  0000000000402000  0000000000402000  00002000  2**3
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+(...)
+
+$ ./const
+Segmentation fault (core dumped)
+```
+
+書籍とアドレス番地は異なるが、nmコマンドで `a` が `0x402014` に配置され、それが `.rodata` セクションのエリアであることは書籍と同様に確認できた。
+実行すると read-only 領域への書き込みで segfault したことを確認できた。
+
+
