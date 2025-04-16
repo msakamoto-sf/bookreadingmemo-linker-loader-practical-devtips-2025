@@ -1,0 +1,382 @@
+# 第5章 リンカ・スクリプトの役割と動作
+
+### リスト 5.1 - 5.3 main.c, lib1.c, lib2.c
+
+- [main.c](CHAPTER-05/main.c)
+- [lib1.c](CHAPTER-05/lib1.c)
+- [lib2.c](CHAPTER-05/lib2.c)
+- 書籍化からの変更点: 特に無し
+
+コンパイルと実行:
+
+```
+$ gcc -c main.c -Wall
+$ gcc -c lib1.c -Wall
+$ gcc -c lib2.c -Wall
+$ gcc main.o lib1.o lib2.o -Wall -o linksamp
+$ ./linksamp
+10
+```
+
+書籍の通りコンパイル・リンク・実行できた。
+
+main.o の objdump 結果:
+
+```
+$ objdump -h -p main.o
+
+main.o:     file format elf64-x86-64
+
+Sections:
+Idx Name          Size      VMA               LMA               File off  Algn
+  0 .text         00000018  0000000000000000  0000000000000000  00000040  2**0
+                  CONTENTS, ALLOC, LOAD, RELOC, READONLY, CODE
+  1 .data         00000000  0000000000000000  0000000000000000  00000058  2**0
+                  CONTENTS, ALLOC, LOAD, DATA
+  2 .bss          00000000  0000000000000000  0000000000000000  00000058  2**0
+                  ALLOC
+  3 .comment      0000002f  0000000000000000  0000000000000000  00000058  2**0
+                  CONTENTS, READONLY
+  4 .note.GNU-stack 00000000  0000000000000000  0000000000000000  00000087  2**0
+                  CONTENTS, READONLY
+  5 .note.gnu.property 00000030  0000000000000000  0000000000000000  00000088  2**3
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+  6 .eh_frame     00000038  0000000000000000  0000000000000000  000000b8  2**3
+                  CONTENTS, ALLOC, LOAD, RELOC, READONLY, DATA
+```
+
+`.text, .data, .bss` については書籍と同様に並んでおり、フラグについても書籍と同じ構成になっていることを確認できた。
+
+lib1.o の objdump 結果:
+
+```
+$ objdump -h -p lib1.o
+
+lib1.o:     file format elf64-x86-64
+
+Sections:
+Idx Name          Size      VMA               LMA               File off  Algn
+  0 .text         0000001e  0000000000000000  0000000000000000  00000040  2**0
+                  CONTENTS, ALLOC, LOAD, RELOC, READONLY, CODE
+  1 .data         00000000  0000000000000000  0000000000000000  0000005e  2**0
+                  CONTENTS, ALLOC, LOAD, DATA
+  2 .bss          00000000  0000000000000000  0000000000000000  0000005e  2**0
+                  ALLOC
+  3 .rodata       00000004  0000000000000000  0000000000000000  0000005e  2**0
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+  4 .comment      0000002f  0000000000000000  0000000000000000  00000062  2**0
+                  CONTENTS, READONLY
+  5 .note.GNU-stack 00000000  0000000000000000  0000000000000000  00000091  2**0
+                  CONTENTS, READONLY
+  6 .note.gnu.property 00000030  0000000000000000  0000000000000000  00000098  2**3
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+  7 .eh_frame     00000038  0000000000000000  0000000000000000  000000c8  2**3
+                  CONTENTS, ALLOC, LOAD, RELOC, READONLY, DATA
+```
+
+書籍と同様、変数定義がないため `.data` セクションのサイズがゼロになっていることを確認できた。また、こちらも書籍と同様に `.rodata` が存在することを確認できた。
+
+lib2.o の objdump 結果:
+
+```
+$ objdump -h -p lib2.o
+
+lib2.o:     file format elf64-x86-64
+
+Sections:
+Idx Name          Size      VMA               LMA               File off  Algn
+  0 .text         00000000  0000000000000000  0000000000000000  00000040  2**0
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+  1 .data         00000004  0000000000000000  0000000000000000  00000040  2**2
+                  CONTENTS, ALLOC, LOAD, DATA
+  2 .bss          00000000  0000000000000000  0000000000000000  00000044  2**0
+                  ALLOC
+  3 .comment      0000002f  0000000000000000  0000000000000000  00000044  2**0
+                  CONTENTS, READONLY
+  4 .note.GNU-stack 00000000  0000000000000000  0000000000000000  00000073  2**0
+                  CONTENTS, READONLY
+  5 .note.gnu.property 00000030  0000000000000000  0000000000000000  00000078  2**3
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+```
+
+書籍と同様、 `.text` セクションのサイズがゼロになっていることを確認できた。
+
+linksamp の objdump 結果:
+
+```
+$ objdump -h -p linksamp
+
+linksamp:     file format elf64-x86-64
+
+Program Header:
+    PHDR off    0x0000000000000040 vaddr 0x0000000000400040 paddr 0x0000000000400040 align 2**3
+         filesz 0x00000000000002d8 memsz 0x00000000000002d8 flags r--
+  INTERP off    0x0000000000000318 vaddr 0x0000000000400318 paddr 0x0000000000400318 align 2**0
+         filesz 0x000000000000001c memsz 0x000000000000001c flags r--
+    LOAD off    0x0000000000000000 vaddr 0x0000000000400000 paddr 0x0000000000400000 align 2**12
+         filesz 0x00000000000005e0 memsz 0x00000000000005e0 flags r--
+    LOAD off    0x0000000000001000 vaddr 0x0000000000401000 paddr 0x0000000000401000 align 2**12
+         filesz 0x0000000000000179 memsz 0x0000000000000179 flags r-x
+    LOAD off    0x0000000000002000 vaddr 0x0000000000402000 paddr 0x0000000000402000 align 2**12
+         filesz 0x00000000000000f4 memsz 0x00000000000000f4 flags r--
+    LOAD off    0x0000000000002de8 vaddr 0x0000000000403de8 paddr 0x0000000000403de8 align 2**12
+         filesz 0x0000000000000230 memsz 0x0000000000000238 flags rw-
+ DYNAMIC off    0x0000000000002df8 vaddr 0x0000000000403df8 paddr 0x0000000000403df8 align 2**3
+         filesz 0x00000000000001d0 memsz 0x00000000000001d0 flags rw-
+    NOTE off    0x0000000000000338 vaddr 0x0000000000400338 paddr 0x0000000000400338 align 2**3
+         filesz 0x0000000000000040 memsz 0x0000000000000040 flags r--
+    NOTE off    0x0000000000000378 vaddr 0x0000000000400378 paddr 0x0000000000400378 align 2**2
+         filesz 0x0000000000000044 memsz 0x0000000000000044 flags r--
+0x6474e553 off    0x0000000000000338 vaddr 0x0000000000400338 paddr 0x0000000000400338 align 2**3
+         filesz 0x0000000000000040 memsz 0x0000000000000040 flags r--
+EH_FRAME off    0x0000000000002014 vaddr 0x0000000000402014 paddr 0x0000000000402014 align 2**2
+         filesz 0x0000000000000034 memsz 0x0000000000000034 flags r--
+   STACK off    0x0000000000000000 vaddr 0x0000000000000000 paddr 0x0000000000000000 align 2**4
+         filesz 0x0000000000000000 memsz 0x0000000000000000 flags rw-
+   RELRO off    0x0000000000002de8 vaddr 0x0000000000403de8 paddr 0x0000000000403de8 align 2**0
+         filesz 0x0000000000000218 memsz 0x0000000000000218 flags r--
+
+Dynamic Section:
+  NEEDED               libc.so.6
+  INIT                 0x0000000000401000
+  FINI                 0x000000000040116c
+  INIT_ARRAY           0x0000000000403de8
+  INIT_ARRAYSZ         0x0000000000000008
+  FINI_ARRAY           0x0000000000403df0
+  FINI_ARRAYSZ         0x0000000000000008
+  GNU_HASH             0x00000000004003c0
+  STRTAB               0x0000000000400488
+  SYMTAB               0x00000000004003e0
+  STRSZ                0x0000000000000085
+  SYMENT               0x0000000000000018
+  DEBUG                0x0000000000000000
+  PLTGOT               0x0000000000403fe8
+  PLTRELSZ             0x0000000000000030
+  PLTREL               0x0000000000000007
+  JMPREL               0x00000000004005b0
+  RELA                 0x0000000000400550
+  RELASZ               0x0000000000000060
+  RELAENT              0x0000000000000018
+  VERNEED              0x0000000000400520
+  VERNEEDNUM           0x0000000000000001
+  VERSYM               0x000000000040050e
+
+Version References:
+  required from libc.so.6:
+    0x09691a75 0x00 03 GLIBC_2.2.5
+    0x069691b4 0x00 02 GLIBC_2.34
+
+Sections:
+Idx Name          Size      VMA               LMA               File off  Algn
+  0 .interp       0000001c  0000000000400318  0000000000400318  00000318  2**0
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+  1 .note.gnu.property 00000040  0000000000400338  0000000000400338  00000338  2**3
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+  2 .note.gnu.build-id 00000024  0000000000400378  0000000000400378  00000378  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+  3 .note.ABI-tag 00000020  000000000040039c  000000000040039c  0000039c  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+  4 .gnu.hash     0000001c  00000000004003c0  00000000004003c0  000003c0  2**3
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+  5 .dynsym       000000a8  00000000004003e0  00000000004003e0  000003e0  2**3
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+  6 .dynstr       00000085  0000000000400488  0000000000400488  00000488  2**0
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+  7 .gnu.version  0000000e  000000000040050e  000000000040050e  0000050e  2**1
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+  8 .gnu.version_r 00000030  0000000000400520  0000000000400520  00000520  2**3
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+  9 .rela.dyn     00000060  0000000000400550  0000000000400550  00000550  2**3
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+ 10 .rela.plt     00000030  00000000004005b0  00000000004005b0  000005b0  2**3
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+ 11 .init         0000001b  0000000000401000  0000000000401000  00001000  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+ 12 .plt          00000030  0000000000401020  0000000000401020  00001020  2**4
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+ 13 .text         0000011c  0000000000401050  0000000000401050  00001050  2**4
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+ 14 .fini         0000000d  000000000040116c  000000000040116c  0000116c  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+ 15 .rodata       00000014  0000000000402000  0000000000402000  00002000  2**3
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+ 16 .eh_frame_hdr 00000034  0000000000402014  0000000000402014  00002014  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+ 17 .eh_frame     000000ac  0000000000402048  0000000000402048  00002048  2**3
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+ 18 .init_array   00000008  0000000000403de8  0000000000403de8  00002de8  2**3
+                  CONTENTS, ALLOC, LOAD, DATA
+ 19 .fini_array   00000008  0000000000403df0  0000000000403df0  00002df0  2**3
+                  CONTENTS, ALLOC, LOAD, DATA
+ 20 .dynamic      000001d0  0000000000403df8  0000000000403df8  00002df8  2**3
+                  CONTENTS, ALLOC, LOAD, DATA
+ 21 .got          00000020  0000000000403fc8  0000000000403fc8  00002fc8  2**3
+                  CONTENTS, ALLOC, LOAD, DATA
+ 22 .got.plt      00000028  0000000000403fe8  0000000000403fe8  00002fe8  2**3
+                  CONTENTS, ALLOC, LOAD, DATA
+ 23 .data         00000008  0000000000404010  0000000000404010  00003010  2**2
+                  CONTENTS, ALLOC, LOAD, DATA
+ 24 .bss          00000008  0000000000404018  0000000000404018  00003018  2**0
+                  ALLOC
+ 25 .comment      0000005c  0000000000000000  0000000000000000  00003018  2**0
+                  CONTENTS, READONLY
+ 26 .gnu.build.attributes 00001d10  0000000000406020  0000000000406020  00003074  2**2
+                  CONTENTS, READONLY, OCTETS
+```
+
+おおむね書籍と同様の内容となっていることを確認できた。
+
+### リスト 5.8 簡単なリンカ・スクリプトの例
+
+- [sample.lds](CHAPTER-05/sample.lds)
+- 書籍化からの変更点: 特に無し
+
+リンクと実行: 書籍とは異なり正常に実行できなかった。
+
+```
+$ gcc main.o lib1.o lib2.o -Wall -o otherscr -T sample.lds
+/usr/bin/ld: warning: otherscr has a LOAD segment with RWX permissions
+
+$ ./otherscr
+./otherscr: error while loading shared libraries: unexpected PLT reloc type 0x06
+```
+
+otherscr の objdump 結果:
+
+```
+$ objdump -h -p otherscr
+
+otherscr:     file format elf64-x86-64
+
+Program Header:
+    PHDR off    0x0000000000000040 vaddr 0x0000000008048040 paddr 0x0000000008047040 align 2**3
+         filesz 0x0000000000000230 memsz 0x0000000000000230 flags r--
+  INTERP off    0x000000000000050c vaddr 0x000000000804850c paddr 0x000000000804850c align 2**0
+         filesz 0x000000000000001c memsz 0x000000000000001c flags r--
+    LOAD off    0x0000000000000000 vaddr 0x0000000008048000 paddr 0x0000000008047000 align 2**12
+         filesz 0x0000000000000270 memsz 0x0000000000000270 flags r--
+    LOAD off    0x0000000000000270 vaddr 0x0000000008048270 paddr 0x0000000008048270 align 2**12
+         filesz 0x0000000000000778 memsz 0x0000000000000779 flags rwx
+ DYNAMIC off    0x00000000000007c0 vaddr 0x00000000080487c0 paddr 0x00000000080487c0 align 2**3
+         filesz 0x00000000000001d0 memsz 0x00000000000001d0 flags rw-
+    NOTE off    0x0000000000000400 vaddr 0x0000000008048400 paddr 0x0000000008048400 align 2**3
+         filesz 0x0000000000000040 memsz 0x0000000000000040 flags r--
+    NOTE off    0x0000000000000440 vaddr 0x0000000008048440 paddr 0x0000000008048440 align 2**2
+         filesz 0x0000000000000044 memsz 0x0000000000000044 flags r--
+0x6474e553 off    0x0000000000000400 vaddr 0x0000000008048400 paddr 0x0000000008048400 align 2**3
+         filesz 0x0000000000000040 memsz 0x0000000000000040 flags r--
+EH_FRAME off    0x00000000000006f8 vaddr 0x00000000080486f8 paddr 0x00000000080486f8 align 2**2
+         filesz 0x000000000000002c memsz 0x000000000000002c flags r--
+   STACK off    0x0000000000000000 vaddr 0x0000000000000000 paddr 0x0000000000000000 align 2**4
+         filesz 0x0000000000000000 memsz 0x0000000000000000 flags rw-
+
+Dynamic Section:
+  NEEDED               libc.so.6
+  INIT                 0x00000000080483c0
+  FINI                 0x00000000080483dc
+  INIT_ARRAY           0x00000000080489e0
+  INIT_ARRAYSZ         0x0000000000000008
+  FINI_ARRAY           0x00000000080489d8
+  FINI_ARRAYSZ         0x0000000000000008
+  GNU_HASH             0x0000000008048698
+  STRTAB               0x0000000008048610
+  SYMTAB               0x0000000008048568
+  STRSZ                0x0000000000000085
+  SYMENT               0x0000000000000018
+  DEBUG                0x0000000000000000
+  PLTGOT               0x00000000080489b0
+  PLTRELSZ             0x0000000000000090
+  PLTREL               0x0000000000000007
+  JMPREL               0x0000000008048728
+  RELA                 0x0000000008048728
+  RELASZ               0x0000000000000060
+  RELAENT              0x0000000000000018
+  VERNEED              0x0000000008048538
+  VERNEEDNUM           0x0000000000000001
+  VERSYM               0x0000000008048528
+
+Version References:
+  required from libc.so.6:
+    0x09691a75 0x00 03 GLIBC_2.2.5
+    0x069691b4 0x00 02 GLIBC_2.34
+
+Sections:
+Idx Name          Size      VMA               LMA               File off  Algn
+  0 .text         0000011c  0000000008048270  0000000008048270  00000270  2**4
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+  1 .plt          00000030  0000000008048390  0000000008048390  00000390  2**4
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+  2 .init         0000001b  00000000080483c0  00000000080483c0  000003c0  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+  3 .fini         0000000d  00000000080483dc  00000000080483dc  000003dc  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+  4 .rodata       0000000c  00000000080483f0  00000000080483f0  000003f0  2**3
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+  5 .note.gnu.property 00000040  0000000008048400  0000000008048400  00000400  2**3
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+  6 .note.ABI-tag 00000020  0000000008048440  0000000008048440  00000440  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+  7 .note.gnu.build-id 00000024  0000000008048460  0000000008048460  00000460  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+  8 .rodata.cst4  00000004  0000000008048484  0000000008048484  00000484  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+  9 .eh_frame     00000084  0000000008048488  0000000008048488  00000488  2**3
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+ 10 .interp       0000001c  000000000804850c  000000000804850c  0000050c  2**0
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+ 11 .gnu.version  0000000e  0000000008048528  0000000008048528  00000528  2**1
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+ 12 .gnu.version_r 00000030  0000000008048538  0000000008048538  00000538  2**3
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+ 13 .dynsym       000000a8  0000000008048568  0000000008048568  00000568  2**3
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+ 14 .dynstr       00000085  0000000008048610  0000000008048610  00000610  2**0
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+ 15 .gnu.hash     0000001c  0000000008048698  0000000008048698  00000698  2**3
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+ 16 .eh_frame     00000040  00000000080486b8  00000000080486b8  000006b8  2**3
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+ 17 .eh_frame_hdr 0000002c  00000000080486f8  00000000080486f8  000006f8  2**2
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+ 18 .rela.dyn     00000090  0000000008048728  0000000008048728  00000728  2**3
+                  CONTENTS, ALLOC, LOAD, READONLY, DATA
+ 19 .data         00000008  00000000080487b8  00000000080487b8  000007b8  2**2
+                  CONTENTS, ALLOC, LOAD, DATA
+ 20 .dynamic      000001d0  00000000080487c0  00000000080487c0  000007c0  2**3
+                  CONTENTS, ALLOC, LOAD, DATA
+ 21 .got          00000020  0000000008048990  0000000008048990  00000990  2**3
+                  CONTENTS, ALLOC, LOAD, DATA
+ 22 .got.plt      00000028  00000000080489b0  00000000080489b0  000009b0  2**3
+                  CONTENTS, ALLOC, LOAD, DATA
+ 23 .fini_array   00000008  00000000080489d8  00000000080489d8  000009d8  2**3
+                  CONTENTS, ALLOC, LOAD, DATA
+ 24 .init_array   00000008  00000000080489e0  00000000080489e0  000009e0  2**3
+                  CONTENTS, ALLOC, LOAD, DATA
+ 25 .bss          00000001  00000000080489e8  00000000080489e8  000009e8  2**0
+                  ALLOC
+ 26 .comment      0000005c  0000000000000000  0000000000000000  000009e8  2**0
+                  CONTENTS, READONLY
+ 27 .gnu.build.attributes 00000720  0000000000000000  0000000000000000  00000a44  2**2
+                  CONTENTS, READONLY, OCTETS
+ 28 .gnu.build.attributes.hot 0000057c  0000000000000000  0000000000000000  00001164  2**2
+                  CONTENTS, READONLY, OCTETS
+ 29 .gnu.build.attributes.unlikely 0000057c  0000000000000000  0000000000000000  000016e0  2**2
+                  CONTENTS, READONLY, OCTETS
+ 30 .gnu.build.attributes.startup 0000057c  0000000000000000  0000000000000000  00001c5c  2**2
+                  CONTENTS, READONLY, OCTETS
+ 31 .gnu.build.attributes.exit 0000057c  0000000000000000  0000000000000000  000021d8  2**2
+                  CONTENTS, READONLY, OCTETS
+```
+
+`.text` のロード周りは書籍と同様の関係性を維持できているが、今回の検証環境ではその他の設定が色々と変わっているためか、正常に実行できない模様。
+
+なお `readelf` で `.rodata` をダンプ表示して文字列(`%d`)が埋め込まれている様子は確認できた。
+
+```
+$ readelf -x 5 otherscr
+
+Hex dump of section '.rodata':
+  0x080483f0 00000000 00000000 25640a00          ........%d..
+```
+
+
